@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalyst Hub — Key Portal</title>
+<style>
+:root{color-scheme:dark;--bg:#080a10;--panel:#101521;--line:#202b3d;--blue:#65a7ff;--muted:#8995a8;--text:#edf3ff}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:28px 16px;background:radial-gradient(ellipse at 50% 0%,#14243d 0%,#090d16 42%,#07090e 100%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text)}
+main{width:min(100%,560px)}
+.brand{display:flex;align-items:center;gap:12px;margin:0 0 24px 4px}
+.logo{width:42px;height:42px;border:1px solid #34527a;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#1d3a60,#101827);color:#b9d9ff;font-weight:900;font-size:19px;box-shadow:0 8px 30px #0008}
+.brand-name{font-size:14px;font-weight:800;letter-spacing:.16em}
+.brand-sub{font-size:11px;color:var(--muted);letter-spacing:.12em;margin-top:3px}
+.panel{border:1px solid var(--line);border-radius:20px;background:linear-gradient(160deg,#121a29f5,#0c111bf5);padding:28px;box-shadow:0 24px 80px #0008}
+.eyebrow{font-size:10px;font-weight:800;letter-spacing:.2em;color:var(--blue);text-transform:uppercase}
+h1{font-size:27px;letter-spacing:-.04em;margin:9px 0 8px}
+.desc{margin:0;color:var(--muted);font-size:13px;line-height:1.65}
+.section{margin-top:26px}
+.label{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12px;font-weight:700;color:#cbd6e8}
+.pill{font-size:10px;color:#9ebfe8;border:1px solid #29415f;background:#132238;padding:5px 8px;border-radius:99px}
+.codebox{display:flex;align-items:center;gap:10px;min-height:54px;padding:10px 11px 10px 15px;border:1px solid #26364d;border-radius:12px;background:#090e17}
+.code{min-width:0;flex:1;overflow-wrap:anywhere;font:600 13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:#dceaff}
+button{border:1px solid #365985;background:#18345a;color:#e8f3ff;border-radius:9px;padding:9px 13px;font-weight:700;font-size:12px;cursor:pointer;transition:.18s}
+button:hover{background:#214775;border-color:#6098d7;transform:translateY(-1px)}
+button:active{transform:translateY(0)}
+.copy{flex:none}
+.timer{margin-top:10px;color:var(--muted);font-size:11px;display:flex;align-items:center;gap:7px}
+.dot{width:6px;height:6px;border-radius:50%;background:#65c995;box-shadow:0 0 10px #65c99588}
+.script{white-space:pre-wrap;word-break:break-word;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;color:#c9d9f2}
+.script-actions{display:flex;justify-content:flex-end;margin-top:11px}
+.note{margin:21px 2px 0;color:#657187;font-size:10px;line-height:1.6;text-align:center}
+.toast{height:18px;margin-top:8px;color:#8edbb1;font-size:11px;text-align:right}
+@media(max-width:480px){.panel{padding:22px 18px}h1{font-size:24px}.codebox{align-items:flex-start}.copy{padding:9px 10px}}
+</style>
+</head>
+<body>
+<main>
+  <header class="brand"><div class="logo">C</div><div><div class="brand-name">CATALYST HUB</div><div class="brand-sub">ACCESS PORTAL</div></div></header>
+  <section class="panel">
+    <div class="eyebrow">Key system</div>
+    <h1>Your access key</h1>
+    <p class="desc">Your daily Catalyst key is shown below. Copy it and paste it into the script when prompted.</p>
+
+    <div class="section">
+      <div class="label"><span>DAILY KEY</span><span class="pill">ROTATES EVERY 24H</span></div>
+      <div class="codebox"><div class="code" id="dailyKey">Generating key…</div><button class="copy" id="copyKey">Copy key</button></div>
+      <div class="timer"><span class="dot"></span><span>Next refresh in <strong id="countdown">24:00:00</strong></span></div>
+      <div class="toast" id="keyToast" aria-live="polite"></div>
+    </div>
+
+    <div class="section">
+      <div class="label"><span>SCRIPT</span><span class="pill">LUA</span></div>
+      <div class="codebox"><div class="script" id="scriptCode">loadstring(game:HttpGet("https://raw.githubusercontent.com/theconytall/Catalyst-Hub/main/main.lua"))()</div></div>
+      <div class="script-actions"><button id="copyScript">Copy script</button></div>
+      <div class="toast" id="scriptToast" aria-live="polite"></div>
+    </div>
+  </section>
+  <p class="note">CATALYST HUB · Keep your key private. This page displays a rotating daily key.</p>
+</main>
+<script>
+(() => {
+  // A fixed 24-hour UTC window gives every visitor the same daily key.
+  const DAY = 86400000;
+  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+  function dailyKey(bucket) {
+    // Deterministic seeded PRNG: same bucket = same key, next bucket = new key.
+    let seed = (bucket ^ 0xC47A1A5) >>> 0;
+    function random() {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    }
+    const words = [];
+    for (let w = 0; w < 3; w++) {
+      let word = "";
+      for (let i = 0; i < 7; i++) word += alphabet[Math.floor(random() * alphabet.length)];
+      words.push(word);
+    }
+    return "CatalystHub_" + words.join("_");
+  }
+  const keyEl = document.getElementById("dailyKey");
+  const timerEl = document.getElementById("countdown");
+  function update() {
+    const now = Date.now();
+    const bucket = Math.floor(now / DAY);
+    const remaining = DAY - (now % DAY);
+    const total = Math.max(0, Math.floor(remaining / 1000));
+    const h = String(Math.floor(total / 3600)).padStart(2, "0");
+    const m = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
+    const s = String(total % 60).padStart(2, "0");
+    keyEl.textContent = dailyKey(bucket);
+    timerEl.textContent = `${h}:${m}:${s}`;
+  }
+  async function copy(text, toast) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.textContent = "Copied to clipboard";
+    } catch {
+      toast.textContent = "Clipboard blocked — select and copy the text manually.";
+    }
+    setTimeout(() => toast.textContent = "", 2600);
+  }
+  document.getElementById("copyKey").addEventListener("click", () =>
+    copy(keyEl.textContent, document.getElementById("keyToast")));
+  document.getElementById("copyScript").addEventListener("click", () =>
+    copy(document.getElementById("scriptCode").textContent, document.getElementById("scriptToast")));
+  update();
+  setInterval(update, 1000);
+})();
+</script>
+</body>
+</html>
